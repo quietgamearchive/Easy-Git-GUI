@@ -460,7 +460,7 @@ class GitCoreMixin:
     # Timeline helpers
     # ========================================================
 
-    def load_timeline(self):
+    def load_timeline(self, keep_position=False):
         # Async: git log can take a moment on large repositories.
         # The newest request wins (request guard), so rapid
         # refreshes cannot interleave.
@@ -470,7 +470,23 @@ class GitCoreMixin:
 
         self._timeline_load_id = getattr(self, "_timeline_load_id", 0) + 1
         request_id = self._timeline_load_id
+        self._timeline_loading = True
         limit = getattr(self, "_timeline_limit", 100)
+
+        # Fetch one extra commit so we can tell whether more
+        # history exists (for the auto-load-on-scroll feature).
+        fetch = limit + 1
+
+        # When auto-loading at the bottom, remember where the view
+        # was so the rebuild does not jump back to the top.
+        self._timeline_scroll_pos = None
+
+        if keep_position:
+            try:
+                self._timeline_scroll_pos = float(self.timeline.yview()[0])
+                self._timeline_scroll_count = len(self.timeline.get_children())
+            except tk.TclError:
+                self._timeline_scroll_pos = None
 
         def worker():
             # --all includes refs/stash, which would show stash
@@ -482,12 +498,14 @@ class GitCoreMixin:
                 "--pretty=format:%h|%an|%ad|%D|%s",
                 "--all",
                 "--exclude=refs/stash",
-                "-n", str(limit)
+                "-n", str(fetch)
             ], log_command=False)
 
         def done(result):
             if getattr(self, "_timeline_load_id", 0) != request_id:
                 return  # superseded by a newer request
+
+            self._timeline_loading = False
 
             code, output = result
 
@@ -501,7 +519,10 @@ class GitCoreMixin:
 
             show_all = self.show_all_commits.get()
 
-            for line in output.splitlines():
+            lines = output.splitlines()
+            self._timeline_has_more = len(lines) > limit
+
+            for line in lines[:limit]:
                 parts = line.split("|", 4)
 
                 if len(parts) != 5:
@@ -523,7 +544,47 @@ class GitCoreMixin:
                 except tk.TclError:
                     return
 
-        self._diff_worker(worker, done)
+            # Keep the same relative position after an auto-load
+            # rebuild: rows are inserted in the same order, so the
+            # previously topmost row keeps its index.
+            if self._timeline_scroll_pos is not None:
+                old_count = getattr(self, "_timeline_scroll_count", 0)
+                new_count = len(self.timeline.get_children())
+
+                if old_count > 0 and new_count > 0:
+                    row = self._timeline_scroll_pos * old_count
+                    self.timeline.yview_moveto(row / new_count)
+
+        def on_error(error):
+            self._timeline_loading = False
+
+        self._diff_worker(worker, done, on_error=on_error)
+
+    # ========================================================
+    # Timeline auto-load (infinite scroll)
+    #
+    # Called from the vertical scrollbar callback when the view
+    # reaches the bottom and more history is known to exist.
+    # ========================================================
+
+    def _on_timeline_scroll(self, first, last):
+        try:
+            self.timeline_scroll.set(first, last)
+        except tk.TclError:
+            return  # main window closed
+
+        if self._timeline_loading or self.busy:
+            return
+
+        try:
+            near_bottom = float(last) >= 0.995
+        except (TypeError, ValueError):
+            return
+
+        if near_bottom and self._timeline_has_more:
+            self._timeline_limit = getattr(self, "_timeline_limit", 100) + 100
+            self.log(f"Loading up to {self._timeline_limit} commits...")
+            self.load_timeline(keep_position=True)
 
     # ========================================================
     # Parse git's ref decorations (%D) into a tag string
