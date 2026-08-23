@@ -359,9 +359,10 @@ class GitPurgeMixin:
 
     @staticmethod
     def _format_size(size):
-        # None or 0: file is not in the current tree (historical
-        # only), so the repository cannot report a single size.
-        if not size:
+        # None: file is not in the current tree (historical only),
+        # so the repository cannot report a single size.  A real
+        # size of 0 bytes is still reported as "0 B".
+        if size is None:
             return "?"
 
         try:
