@@ -1,4 +1,9 @@
-                    GNU GENERAL PUBLIC LICENSE
+Copyright (C) 2026 Quiet Game Archive (https://www.youtube.com/@quietgamearchive)
+
+This project is licensed under the GNU General Public License version 3
+(or, at your option, any later version).  See below for the full text.
+
+GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
  Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
@@ -74,8 +79,8 @@ modification follow.
 
   "This License" refers to version 3 of the GNU General Public License.
 
-  "Copyright" also means copyright-like laws that apply to other kinds of
-works, such as semiconductor masks.
+  "Copyright" also means laws similar to copyright that hold for other
+kinds of works, such as semiconductor masks.
 
   "The Program" refers to any copyrightable work licensed under this
 License.  Each licensee is addressed as "you".  "Licensees" and
@@ -576,7 +581,7 @@ Foundation.  If the Program does not specify a version number of the
 GNU General Public License, you may choose any version ever published
 by the Free Software Foundation.
 
-  If the Program specifies that a proxy can decide which future
+  If the Program specifies that a proxy can decide whether future
 versions of the GNU General Public License can be used, that proxy's
 public statement of acceptance of a version permanently authorizes you
 to choose that version for the Program.
