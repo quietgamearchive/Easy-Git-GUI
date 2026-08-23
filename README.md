@@ -19,6 +19,7 @@ Python tkinter 製の軽量 Git GUI ツールです。
   - **Modify commit** — Rewrite a commit message via non-interactive rebase (optional tag). / 非対話型 rebase でコミットメッセージを書き換え(タグも可)
   - **Delete** — Permanently remove the selected commits from all history using git-filter-repo. / git-filter-repo で選択したコミットを全履歴から完全削除
   - **Hide / Show** — Hide or show commits in the timeline. / タイムライン上でコミットを表示/非表示
+  - The timeline shows the latest 100 commits by default; scrolling to the bottom **auto-loads more** (+100 each time) until the full history is loaded. / タイムラインはデフォルトで最新 100 件を表示。スクロールバーを最下部までスクロールすると**自動で追加読み込み**(毎回 +100 件)され、全履歴が読み込まれるまで続きます。
 - **Purge** — Permanently remove selected files from all history using git-filter-repo. / git-filter-repo で選択したファイルを全履歴から完全削除
 
 ## Requirements / 動作環境
