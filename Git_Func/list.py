@@ -325,8 +325,7 @@ class GitListMixin:
         # selection; Delete accepts a multi-selection.
         self.timeline_menu.entryconfigure(0, state="normal" if count == 1 else "disabled")
         self.timeline_menu.entryconfigure(1, state="normal" if count == 1 else "disabled")
-        self.timeline_menu.entryconfigure(2, state="normal" if count == 1 else "disabled")
-        self.timeline_menu.entryconfigure(3, state="normal" if count >= 1 else "disabled")
+        self.timeline_menu.entryconfigure(2, state="normal" if count >= 1 else "disabled")
 
         # Dynamically label the hide/show entry: "Show" when every
         # selected commit is already hidden, "Hide" otherwise.
@@ -347,7 +346,7 @@ class GitListMixin:
         else:
             hide_show_label = "Hide"
 
-        self.timeline_menu.entryconfigure(5, label=hide_show_label)
+        self.timeline_menu.entryconfigure(4, label=hide_show_label)
 
         try:
             self.timeline_menu.tk_popup(event.x_root, event.y_root)
@@ -955,15 +954,37 @@ class GitListMixin:
             if not values or len(values) < 5:
                 continue
 
-            commit_hash = str(values[0]).strip()
+            short_hash = str(values[0]).strip()
 
-            if commit_hash:
-                rows.append((commit_hash, str(values[4])))
+            if not short_hash:
+                continue
+
+            # Store the FULL hash: the timeline only displays a
+            # short abbreviation, which is only guaranteed unique
+            # among the objects present at display time.  A stored
+            # abbreviation could later match a different commit
+            # (new objects, history rewrites) and hide it by
+            # mistake, so the stored list never holds abbreviations.
+            full_hash = short_hash
+
+            if len(short_hash) < 40:
+                code, output = self.run_git(["rev-parse", short_hash], log_command=False, log_output=False)
+
+                if code != 0 or not output.strip():
+                    self.log(f"WARNING: could not resolve commit {short_hash}; skipped.")
+                    continue
+
+                full_hash = output.strip()
+
+            rows.append((full_hash, short_hash, str(values[4])))
 
         if not rows:
             return
 
-        all_hidden = all(self.is_commit_hidden(commit_hash) for commit_hash, _ in rows)
+        # The hidden-state check uses the displayed abbreviation
+        # (short) so legacy entries stored as abbreviations still
+        # match; the stored list itself holds full hashes only.
+        all_hidden = all(self.is_commit_hidden(short) for _, short, _ in rows)
 
         if all_hidden:
             action = "Show"
@@ -980,23 +1001,13 @@ class GitListMixin:
         self.load_hidden_commits()
 
         if all_hidden:
-            for commit_hash, _ in rows:
-                self.hidden_commits.discard(commit_hash)
+            for full_hash, _, _ in rows:
+                self._discard_hidden_abbrev(full_hash)
+                self.hidden_commits.discard(full_hash)
         else:
-            for commit_hash, _ in rows:
-                self.hidden_commits.add(commit_hash)
+            for full_hash, _, _ in rows:
+                self._discard_hidden_abbrev(full_hash)
+                self.hidden_commits.add(full_hash)
 
         self.save_hidden_commits()
-        self.load_timeline()
-
-    # ========================================================
-    # Load more commits
-    # ========================================================
-
-    def timeline_load_more(self):
-        if self.busy:
-            return
-
-        self._timeline_limit = getattr(self, "_timeline_limit", 100) + 100
-        self.log(f"Loading up to {self._timeline_limit} commits...")
         self.load_timeline()
