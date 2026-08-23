@@ -167,6 +167,8 @@ class GitGUI(GitCoreMixin, GitStateMixin, GitListMixin, GitInitMixin, GitCommitM
         self.hidden_commits = set()
         self._timeline_limit = 100
         self._timeline_load_id = 0
+        self._timeline_loading = False
+        self._timeline_has_more = False
 
         self.setup_style()
         self.build_ui()
@@ -254,10 +256,10 @@ class GitGUI(GitCoreMixin, GitStateMixin, GitListMixin, GitInitMixin, GitCommitM
         self.timeline.column("comment", width=450)
         
 
-        timeline_scroll = ttk.Scrollbar(timeline_frame, orient="vertical", command=self.timeline.yview)
-        self.timeline.configure(yscrollcommand=timeline_scroll.set)
+        self.timeline_scroll = ttk.Scrollbar(timeline_frame, orient="vertical", command=self.timeline.yview)
+        self.timeline.configure(yscrollcommand=self._on_timeline_scroll)
         self.timeline.pack(side="left", fill="both", expand=True)
-        timeline_scroll.pack(side="right", fill="y")
+        self.timeline_scroll.pack(side="right", fill="y")
 
         self.timeline.bind("<Double-1>", self.show_selected_commit)
         self.timeline.bind("<Button-3>", self.on_timeline_right_click)
@@ -272,7 +274,6 @@ class GitGUI(GitCoreMixin, GitStateMixin, GitListMixin, GitInitMixin, GitCommitM
         self.timeline_menu.add_command(label="Delete", command=self.timeline_delete)
         self.timeline_menu.add_separator()
         self.timeline_menu.add_command(label="Hide", command=self.timeline_hide_show)
-        self.timeline_menu.add_command(label="Load more commits", command=self.timeline_load_more)
         self.timeline_menu.add_separator()
         self.timeline_menu.add_checkbutton(
             label="Show all commit",
@@ -705,7 +706,20 @@ def main():
         return
 
     root = tk.Tk()
-    GitGUI(root, project, user, email)
+    root.withdraw()
+
+    def init_app():
+        GitGUI(root, project, user, email)
+        root.deiconify()
+
+    # Build the GUI from inside mainloop: background worker
+    # threads deliver results via root.after(), which only works
+    # while mainloop is running.  Constructing the GUI before
+    # mainloop starts would race: a fast git command finishing
+    # early would make the worker's after() raise
+    # "main thread is not in main loop" and the first timeline
+    # load would be silently lost.
+    root.after(0, init_app)
     root.mainloop()
 
 
