@@ -1,0 +1,49 @@
+# ===== Launcher (sample) =====
+#
+# Copy this file to _git_frontend.py, then edit the three
+# configuration fields below to match your environment.
+#
+#   USER / EMAIL   - the identity new commits will use
+#   MAIN_PATH      - absolute path to Git_GUI.py (the shared
+#                    main script; if you keep the tool directory
+#                    fixed, this path never changes)
+#
+# The project directory is automatically the parent of this
+# launcher file, so you only need to fill in the three fields.
+
+import sys
+from pathlib import Path
+
+no_console = True
+
+# Detach from the parent console when run by python.exe (dev mode only).
+if no_console and sys.platform == "win32" and not getattr(sys, "frozen", False):
+    import ctypes
+    import io
+
+    kernel32 = ctypes.windll.kernel32
+
+    if kernel32.GetConsoleWindow() and kernel32.FreeConsole():
+        # Detached from the console: discard stdout/stderr so later
+        # print() calls do not raise OSError on the invalid handle.
+        sys.stdout = io.StringIO()
+        sys.stderr = io.StringIO()
+
+
+# ===== Configuration (fill in before first run) =====
+
+USER = "your_name"
+EMAIL = "your@email.com"
+
+# Absolute path to the shared Git_GUI.py script.
+# Example: r"C:\Tools\Easy_Git_GUI\Git_GUI.py"
+MAIN_PATH = r"C:\path\to\Easy_Git_GUI\Git_GUI.py"
+
+
+# ===== Execution (do not edit below this line) =====
+if __name__ == "__main__":
+    import subprocess
+
+    self_path = Path(__file__).resolve()
+    cmd = [sys.executable, MAIN_PATH, str(self_path), USER, EMAIL]
+    subprocess.run(cmd)
