@@ -30,6 +30,14 @@ class GitStateMixin:
     def is_commit_hidden(self, short_hash):
         return any(h.startswith(short_hash) for h in self.hidden_commits)
 
+    def _discard_hidden_abbrev(self, full_hash):
+        # Drop legacy entries stored as short abbreviations of this
+        # commit (older sessions stored the abbreviated hash).  The
+        # set is small, so a linear scan is fine.
+        for h in list(self.hidden_commits):
+            if len(h) < 40 and full_hash.startswith(h):
+                self.hidden_commits.discard(h)
+
     # ========================================================
     # Hidden commit remapping after history rewrites
     #
